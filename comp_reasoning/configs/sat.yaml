@@ -1,0 +1,34 @@
+seed: 0
+device: cuda:0
+train_folder: ./comp_reasoning/data/3sat/train
+valid_folder: ./comp_reasoning/data/3sat/valid
+output_folder: ./comp_reasoning/pk
+batch_size: 1024
+batch_clauses: 300
+epochs: 15000
+num_steps: 100
+diffusion: true
+annealed_landscape: false
+annealed_steps: 10
+contrastive: true
+contrastive_loss_scale: 0.5
+
+model:
+  n_layers: 3
+  emb_dim: 128
+  h_dim: 128
+  widen: 2
+
+optimizer:
+  lr: 1e-4
+  scheduler: None # None, 'CosineLRScheduler'
+  # only applied with CosineLRScheduler
+  lr_min: 1e-5 # cosine decay is applied until this value -> cosine decay is applied from 'lr' to 'lr_min'
+  warmup_t: 1000
+  warmup_lr_init: 1e-5 # warmup goes from this value to 'lr' value
+
+# inference
+sampling: 'pem'
+pem_num_particles: 8
+chk_model: ./comp_reasoning/pk/new_3_sat_diffusion_contrastive.pk
+

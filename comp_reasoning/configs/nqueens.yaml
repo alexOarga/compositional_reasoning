@@ -1,0 +1,19 @@
+seed: 0
+device: cuda:0
+test_path: comp_reasoning/data/nqueens/8_queens_test.txt
+rows_model: comp_reasoning/pk/ebm_8-queens_rows_diffusion_contrastive.pk
+diags_model: comp_reasoning/pk/ebm_8-queens_rows_diffusion_contrastive.pk # same model as for rows
+rows_model_config: comp_reasoning/configs/nqueens_rows.yaml
+diags_model_config: comp_reasoning/configs/nqueens_rows.yaml # same model as for rows
+rows_model_weight: 1.0
+diags_model_weight: 1.0
+batch_size: 100
+num_steps: 100
+sampling: 'pem'
+pem_num_particles: 128
+annealed_landscape: false
+annealed_steps: 10
+contrastive: true
+contrastive_loss_scale: 0.5
+base_dimension: 8
+reduced_dimension: 8

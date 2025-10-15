@@ -1,0 +1,77 @@
+#!/bin/bash
+
+# Python command (change this as needed)
+PYTHON_CMD="python -m comp_reasoning.eval_color --graph_file"
+
+# List of files to process
+FILES=(
+  "comp_reasoning/data/colors/1-Insertions_4.graph"
+  "comp_reasoning/data/colors/2-Insertions_4.graph"
+  "comp_reasoning/data/colors/anna.graph"
+  "comp_reasoning/data/colors/david.graph"
+  "comp_reasoning/data/colors/games120.graph"
+  "comp_reasoning/data/colors/homer.graph"
+  "comp_reasoning/data/colors/huck.graph"
+  "comp_reasoning/data/colors/jean.graph"
+  "comp_reasoning/data/colors/mug88_1.graph"
+  "comp_reasoning/data/colors/myciel3.graph"
+  "comp_reasoning/data/colors/myciel4.graph"
+  "comp_reasoning/data/colors/myciel5.graph"
+  "comp_reasoning/data/colors/myciel6.graph"
+  "comp_reasoning/data/colors/queen3_3.graph"
+  "comp_reasoning/data/colors/queen5_5.graph"
+  "comp_reasoning/data/colors/queen6_6.graph"
+  "comp_reasoning/data/colors/queen7_7.graph"
+  "comp_reasoning/data/colors/queen8_8.graph"
+  "comp_reasoning/data/colors/queen8_12.graph"
+  # "comp_reasoning/data/random_graphs/complete_graph_10_10_0.5_2.graph"
+  # "comp_reasoning/data/random_graphs/complete_graph_11_11_0.5_3.graph"
+  # "comp_reasoning/data/random_graphs/complete_graph_12_12_0.5_4.graph"
+  # "comp_reasoning/data/random_graphs/complete_graph_8_8_0.5_0.graph"
+  # "comp_reasoning/data/random_graphs/complete_graph_9_9_0.5_1.graph"
+  # "comp_reasoning/data/random_graphs/erdos_renyi_20_40_0.3_0.graph"
+  # "comp_reasoning/data/random_graphs/erdos_renyi_20_40_0.3_1.graph"
+  # "comp_reasoning/data/random_graphs/erdos_renyi_20_40_0.3_2.graph"
+  # "comp_reasoning/data/random_graphs/erdos_renyi_20_40_0.3_3.graph"
+  # "comp_reasoning/data/random_graphs/erdos_renyi_20_40_0.3_4.graph"
+  # "comp_reasoning/data/random_graphs/erdos_renyi_80_100_0.3_0.graph"
+  # "comp_reasoning/data/random_graphs/erdos_renyi_80_100_0.3_1.graph"
+  # "comp_reasoning/data/random_graphs/erdos_renyi_80_100_0.3_2.graph"
+  # "comp_reasoning/data/random_graphs/erdos_renyi_80_100_0.3_3.graph"
+  # "comp_reasoning/data/random_graphs/erdos_renyi_80_100_0.3_4.graph"
+  # "comp_reasoning/data/random_graphs/paley_graph_19_19_0.5_0.graph"
+  # "comp_reasoning/data/random_graphs/paley_graph_23_23_0.5_1.graph"
+  # "comp_reasoning/data/random_graphs/paley_graph_29_29_0.5_2.graph"
+  # "comp_reasoning/data/random_graphs/paley_graph_31_31_0.5_3.graph"
+  # "comp_reasoning/data/random_graphs/paley_graph_37_37_0.5_4.graph"
+  # "comp_reasoning/data/random_graphs/powerlaw_cluster_graph_20_40_0.4_0.graph"
+  # "comp_reasoning/data/random_graphs/powerlaw_cluster_graph_20_40_0.4_1.graph"
+  # "comp_reasoning/data/random_graphs/powerlaw_cluster_graph_20_40_0.4_2.graph"
+  # "comp_reasoning/data/random_graphs/powerlaw_cluster_graph_20_40_0.4_3.graph"
+  # "comp_reasoning/data/random_graphs/powerlaw_cluster_graph_20_40_0.4_4.graph"
+  # "comp_reasoning/data/random_graphs/powerlaw_cluster_graph_80_100_0.6_0.graph"
+  # "comp_reasoning/data/random_graphs/powerlaw_cluster_graph_80_100_0.6_1.graph"
+  # "comp_reasoning/data/random_graphs/powerlaw_cluster_graph_80_100_0.6_2.graph"
+  # "comp_reasoning/data/random_graphs/powerlaw_cluster_graph_80_100_0.6_3.graph"
+  # "comp_reasoning/data/random_graphs/powerlaw_cluster_graph_80_100_0.6_4.graph"
+  # "comp_reasoning/data/random_graphs/random_regular_expander_graph_20_40_6.0_0.graph"
+  # "comp_reasoning/data/random_graphs/random_regular_expander_graph_20_40_6.0_1.graph"
+  # "comp_reasoning/data/random_graphs/random_regular_expander_graph_20_40_6.0_2.graph"
+  # "comp_reasoning/data/random_graphs/random_regular_expander_graph_20_40_6.0_3.graph"
+  # "comp_reasoning/data/random_graphs/random_regular_expander_graph_20_40_6.0_4.graph"
+  # "comp_reasoning/data/random_graphs/random_regular_expander_graph_80_100_4.0_0.graph"
+  # "comp_reasoning/data/random_graphs/random_regular_expander_graph_80_100_4.0_1.graph"
+  # "comp_reasoning/data/random_graphs/random_regular_expander_graph_80_100_4.0_2.graph"
+  # "comp_reasoning/data/random_graphs/random_regular_expander_graph_80_100_4.0_3.graph"
+  # "comp_reasoning/data/random_graphs/random_regular_expander_graph_80_100_4.0_4.graph"
+)
+
+# Iterate over the specified files
+for FILE in "${FILES[@]}"; do
+  if [ -f "$FILE" ]; then
+    echo "Processing $FILE..."
+    $PYTHON_CMD "$FILE"
+  else
+    echo "File not found: $FILE"
+  fi
+done

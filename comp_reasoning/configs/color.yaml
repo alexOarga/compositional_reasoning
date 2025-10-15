@@ -1,0 +1,38 @@
+seed: 0
+device: cuda:0
+output_folder: ./comp_reasoning/pk
+num_colors: 14
+max_colors: 300
+batch_size: 1024
+batch_particles: 512
+num_workers: 16
+epochs: 50010
+num_steps: 1000
+diffusion: true
+annealed_landscape: false
+annealed_steps: 10
+contrastive: true
+contrastive_loss_scale: 0.5
+
+model:
+  n_layers: 3
+  emb_dim: 256
+  h_dim: 256
+  widen: 2
+
+optimizer:
+  lr: 1e-4
+  scheduler: None # None, 'CosineLRScheduler'
+  # only applied with CosineLRScheduler
+  lr_min: 1e-5 # cosine decay is applied until this value -> cosine decay is applied from 'lr' to 'lr_min'
+  warmup_t: 1000
+  warmup_lr_init: 1e-5 # warmup goes from this value to 'lr' value
+
+# inference
+pk_path: comp_reasoning/pk/color_diffusion_contrastive.pk
+graph_file: comp_reasoning/data/random_graphs/erdos_renyi_20_40_0.3_0.graph
+sampling: 'pem' #'reverse_diffusion', 'pem', 'ULA', 'MALA', 'UHMC', 'HMC'
+pem_num_particles: 128
+batch_graphs: 2048
+#reduced_colors: 5
+

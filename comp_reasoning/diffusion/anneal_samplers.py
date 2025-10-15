@@ -1,0 +1,254 @@
+'''
+###############################################
+NOTE: the following code was adapted from:
+https://github.com/yilundu/reduce_reuse_recycle
+'''
+import torch
+import numpy as np
+
+
+class AnnealedMALASampler:
+  """Implements AIS with ULA"""
+
+  def __init__(self,
+               num_steps,
+               num_samples_per_step,
+               step_sizes,
+               gradient_function,
+               ):
+    assert len(step_sizes) == num_steps, "Must have as many stepsizes as intermediate distributions."
+    self._step_sizes = step_sizes
+    self._num_steps = num_steps
+    self._num_samples_per_step = num_samples_per_step
+    self._gradient_function = gradient_function
+
+
+  def sample_step(self, x, t,ts, model_args):
+  
+    e_old,grad = self._gradient_function(x, ts, **model_args)
+    x = x.detach() # grap function usually requires grad and we dont want to carry x gradients
+    for i in range(self._num_samples_per_step):
+      ss = self._step_sizes[t]
+      std = (2 * ss) ** .5
+      noise = torch.randn_like(grad) * std
+
+      x_proposal  = x + grad * ss + noise
+
+      # Compute Energy of the samples 
+      e_new,grad_new = self._gradient_function(x_proposal, ts, **model_args)
+      x_proposal = x_proposal.detach()
+
+      log_xhat_given_x = -1.0*((x_proposal - x - ss * grad) ** 2).sum() / (2 * ss**2)
+      log_x_given_xhat = -1.0 * ((x - x_proposal - ss * grad_new) ** 2).sum() / (2 * ss**2)
+      log_alpha = e_new-e_old +log_x_given_xhat - log_xhat_given_x 
+      
+      # Acceptance Ratio
+      acceptance_mask = torch.log(torch.rand(1)).cpu() < log_alpha.detach().cpu()
+      x[acceptance_mask] = x_proposal[acceptance_mask]
+      e_old[acceptance_mask] = e_new[acceptance_mask]
+      grad[acceptance_mask] = grad_new[acceptance_mask]
+
+    return x
+
+def leapfrog_step_c(x_0,
+                  v_0,
+                  gradient_target,
+                  step_size,
+                  mass_diag_sqrt,
+                  num_steps,
+                  grad_i):
+  """Multiple leapfrog steps with no metropolis correction."""
+  x_k = x_0
+  v_k = v_0
+  grad_k = grad_i 
+  if mass_diag_sqrt is None:
+    mass_diag_sqrt = torch.ones_like(x_k)
+
+  mass_diag = mass_diag_sqrt ** 2.
+
+  for _ in range(num_steps):  
+    v_k += 0.5 * step_size *grad_k#  # half step in v
+    x_k = x_k + step_size * v_k / mass_diag  # Step in x
+    grad_k = gradient_target(x_k)[1]
+    v_k += 0.5 * step_size * grad_k  # half step in v
+  
+
+  return x_k, v_k
+
+
+
+class AnnealedCHASampler:
+
+  def __init__(self,
+               num_steps,
+               num_samples_per_step,
+               step_sizes,
+               damping_coeff,
+               mass_diag_sqrt,
+               num_leapfrog_steps,
+               gradient_function,
+               ):
+    assert len(step_sizes) == num_steps, "Must have as many stepsizes as intermediate distributions."
+    self._damping_coeff = damping_coeff
+    self._mass_diag_sqrt = mass_diag_sqrt
+    self._step_sizes = step_sizes
+    self._num_steps = num_steps
+    self._num_leapfrog_steps = num_leapfrog_steps
+    self._num_samples_per_step = num_samples_per_step
+    self._gradient_function = gradient_function
+
+
+  def leapfrog_step_(self, x, v, i, ts, grad_i,model_args):
+    
+    step_size = self._step_sizes[i]
+    return leapfrog_step_c(x, v, lambda _x: self._gradient_function(_x, ts, **model_args), step_size, self._mass_diag_sqrt[i], self._num_leapfrog_steps,grad_i)
+
+
+  def sample_step(self, x, t,ts, model_args):
+
+
+
+    M=self._mass_diag_sqrt[t] # VAR 
+    
+    # Sample Momentum
+    v = torch.randn_like(x) * M 
+    # v_dist = torch.distributions.normal.Normal(torch.zeros_like(x).cuda(), torch.ones_like(x).cuda() * M)
+    # v = v_dist.sample().cuda()
+
+    for i in range(self._num_samples_per_step):
+      # Partial Momentum Refreshment
+      eps = torch.randn_like(x)
+      v_prime = v * self._damping_coeff + np.sqrt(1. - self._damping_coeff**2) * eps * M
+      
+      energy_i, grad_i = self._gradient_function(x,ts,**model_args)
+      x = x.detach() # grap function usually requires grad and we dont want to carry x gradients
+      x_old = x.clone()
+      v_old =  v.clone()
+      x_new, v_new = self.leapfrog_step_(x, v_prime, t, ts,grad_i, model_args)
+      
+      energy_new, grad_new = self._gradient_function(x_new,ts,**model_args)
+      energy_diff = energy_new-energy_i
+
+
+      # log_v = torch.sum(v_dist.log_prob(v_prime))
+      # log_v_new = torch.sum(v_dist.log_prob(v_new))
+
+      
+      log_v_new = (-0.5*(1/M**2)) *torch.sum(v_new**2) # As mean 0 and Variance M**2 
+      log_v = (-0.5*(1/M**2)) *torch.sum(v_prime**2) 
+
+
+      logp_accept = energy_diff + (log_v_new - log_v)
+      alpha = torch.min(torch.tensor(1.0),torch.exp(logp_accept))
+
+      u = torch.rand(1, device=x.device)
+      update_mask = u <= alpha
+      not_update_mask = torch.logical_not(update_mask)
+
+      x[update_mask] = x_new[update_mask]
+      v[update_mask] = v_new[update_mask]
+
+      x[not_update_mask] = x_old[not_update_mask]
+      v[not_update_mask] = v_old[not_update_mask]
+    
+      # alpha = torch.exp(logp_accept)
+      # mask = (torch.rand(x.shape[0]).cuda() < alpha).float().unsqueeze(1).unsqueeze(2).unsqueeze(3)
+      # x = mask * x_new + (1 - mask) * x
+      # v = mask * v_new + (1 -mask) * v_prime
+
+    return x
+
+def leapfrog_step(x_0,
+                  v_0,
+                  gradient_target,
+                  step_size,
+                  mass_diag_sqrt,
+                  num_steps,
+                  ):
+  # """Multiple leapfrog steps with no metropolis correction."""
+  x_k = x_0
+  v_k = v_0
+  if mass_diag_sqrt is None:
+    mass_diag_sqrt = torch.ones_like(x_k)
+
+  mass_diag = mass_diag_sqrt ** 2.
+  grad = gradient_target(x_k)
+  x_k = x_k.detach() # grad function usually requires grad and we dont want to carry x gradients
+  for _ in range(num_steps):  # Inefficient version - should combine half steps
+    v_k += 0.5 * step_size * grad#gradient_target(x_k)  # half step in v
+    x_k += step_size * v_k / mass_diag  # Step in x
+    grad = gradient_target(x_k)
+    x_k = x_k.detach()
+    v_k += 0.5 * step_size * grad  # half step in v
+  return x_k, v_k
+
+class AnnealedUHASampler:
+  """Implements UHA Sampling"""
+
+  def __init__(self,
+               num_steps,
+               num_samples_per_step,
+               step_sizes,
+               damping_coeff,
+               mass_diag_sqrt,
+               num_leapfrog_steps,
+               gradient_function,
+               ):
+    assert len(step_sizes) == num_steps, "Must have as many stepsizes as intermediate distributions."
+    self._damping_coeff = damping_coeff
+    self._mass_diag_sqrt = mass_diag_sqrt
+    self._step_sizes = step_sizes
+    self._num_steps = num_steps
+    self._num_leapfrog_steps = num_leapfrog_steps
+    self._num_samples_per_step = num_samples_per_step
+    self._gradient_function = gradient_function
+
+
+  def leapfrog_step_(self, x, v, i, ts, model_args):
+      step_size = self._step_sizes[i]
+      return leapfrog_step(x, v, lambda _x: self._gradient_function(_x, ts, **model_args), step_size, self._mass_diag_sqrt[i], self._num_leapfrog_steps)
+
+
+  def sample_step(self, x, t,ts, model_args):
+
+    # Sample Momentum
+    v = torch.randn_like(x) * self._mass_diag_sqrt[t]
+
+    for i in range(self._num_samples_per_step):
+
+      # Partial Momentum Refreshment
+      eps = torch.randn_like(x)
+
+      v = v * self._damping_coeff + np.sqrt(1. - self._damping_coeff**2) * eps * self._mass_diag_sqrt[t]
+
+      x, v = self.leapfrog_step_(x, v, t, ts, model_args)
+
+    return x
+
+
+
+class AnnealedULASampler:
+  """Implements AIS with ULA"""
+
+  def __init__(self,
+               num_steps,
+               num_samples_per_step,
+               step_sizes,
+               gradient_function,
+               ):
+    assert len(step_sizes) == num_steps, "Must have as many stepsizes as intermediate distributions."
+    self._step_sizes = step_sizes
+    self._num_steps = num_steps
+    self._num_samples_per_step = num_samples_per_step
+    self._gradient_function = gradient_function
+
+
+  def sample_step(self, x, t,ts, model_args):
+
+    for i in range(self._num_samples_per_step):
+      ss = self._step_sizes[t]
+      std = (2 * ss) ** .5
+      grad = self._gradient_function(x, ts, **model_args)
+      noise = torch.randn_like(grad) * std
+      x = x + grad * ss + noise
+    return x

@@ -1,0 +1,37 @@
+seed: 0
+device: cuda:0
+#train_file: ./comp_reasoning/data/crosswords/train.pkl
+#test_file: ./comp_reasoning/data/crosswords/test.pkl
+embedding_dim: 1536
+vocab_size: 26 # 26 upper case letters
+output_folder: ./comp_reasoning/pk
+batch_size: 2048
+epochs: 15000
+num_steps: 100
+diffusion: true
+annealed_landscape: false
+annealed_steps: 10
+contrastive: false
+contrastive_loss_scale: 0.5
+
+model:
+  n_layers: 3
+  emb_dim: 1024
+  h_dim: 1024
+  widen: 1
+
+optimizer:
+  lr: 1e-4
+  scheduler: None # None, 'CosineLRScheduler'
+  # only applied with CosineLRScheduler
+  lr_min: 1e-5 # cosine decay is applied until this value -> cosine decay is applied from 'lr' to 'lr_min'
+  warmup_t: 1000
+  warmup_lr_init: 1e-5 # warmup goes from this value to 'lr' value
+
+# inference
+sampling: 'pem'
+pem_num_particles: 128
+chk_model: comp_reasoning/pk/mini_xwords_diffusion.pk
+embedding_file: comp_reasoning/data/crosswords/test.pkl
+instances_file: comp_reasoning/data/crosswords/mini0505.json
+

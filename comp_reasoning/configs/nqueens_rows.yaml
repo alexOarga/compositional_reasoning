@@ -1,0 +1,25 @@
+seed: 0
+device: cuda:0
+rows: true
+diags: false
+batch_size: 2048
+epochs: 10000
+lr: 1e-4
+num_steps: 100
+annealed_landscape: false
+annealed_steps: 10
+diffusion: true
+diffusion_loss_scale: 1.0
+contrastive: true
+contrastive_loss_scale: 0.5
+train_path: comp_reasoning/data/nqueens/8_queens_train.txt
+valid_path: comp_reasoning/data/nqueens/8_queens_valid.txt
+model:
+  n_layers: 3
+  h_dim: 128
+  emb_dim: 128
+  widen: 2
+
+# for inference only
+pk_path: comp_reasoning/pk/ebm_8-queens_rows_diffusion_contrastive.pk
+
